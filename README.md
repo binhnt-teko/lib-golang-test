@@ -1,5 +1,5 @@
 # Lib Golang Test
-
+export PATH=$PATH:~/go/bin
 
 # Folder structure: 
 ## Connect:

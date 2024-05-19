@@ -1,0 +1,299 @@
+// Copyright 2016, 2017 Thales e-Security, Inc
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+package crypto11
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"math/rand"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/miekg/pkcs11"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestKeysPersistAcrossContexts(t *testing.T) {
+	// Verify that close and re-open works.
+	ctx, err := ConfigureFromFile("config")
+	require.NoError(t, err)
+
+	id := randomBytes()
+	_, err = ctx.GenerateRSAKeyPair(id, rsaSize)
+	if err != nil {
+		_ = ctx.Close()
+		t.Fatal(err)
+	}
+
+	require.NoError(t, ctx.Close())
+
+	ctx, err = ConfigureFromFile("config")
+	require.NoError(t, err)
+
+	key2, err := ctx.FindKeyPair(id, nil)
+	require.NoError(t, err)
+
+	testRsaSigning(t, key2, false)
+	_ = key2.Delete()
+	require.NoError(t, ctx.Close())
+}
+
+func configureWithPin(t *testing.T) (*Context, error) {
+	cfg, err := getConfig("config")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg.Pin == "" {
+		t.Fatal("invalid configuration. configuration must have PIN non empty.")
+	}
+
+	ctx, err := Configure(cfg)
+	if err != nil {
+		t.Fatal("failed to configure service:", err)
+	}
+
+	return ctx, nil
+}
+
+func getConfig(configLocation string) (ctx *Config, err error) {
+	file, err := os.Open(configLocation)
+	if err != nil {
+		log.Printf("Could not open config file: %s", configLocation)
+		return nil, err
+	}
+	defer func() {
+		err = file.Close()
+	}()
+
+	configDecoder := json.NewDecoder(file)
+	config := &Config{}
+	err = configDecoder.Decode(config)
+	if err != nil {
+		log.Printf("Could decode config file: %s", err.Error())
+		return nil, err
+	}
+	return config, nil
+}
+
+func TestKeyPairDelete(t *testing.T) {
+	ctx, err := ConfigureFromFile("config")
+	require.NoError(t, err)
+
+	defer func() {
+		require.NoError(t, ctx.Close())
+	}()
+
+	id := randomBytes()
+	key, err := ctx.GenerateRSAKeyPair(id, 2048)
+	require.NoError(t, err)
+
+	// Check we can find it
+	_, err = ctx.FindKeyPair(id, nil)
+	require.NoError(t, err)
+
+	err = key.Delete()
+	require.NoError(t, err)
+
+	k, err := ctx.FindKeyPair(id, nil)
+	require.NoError(t, err)
+	require.Nil(t, k)
+}
+
+func TestKeyDelete(t *testing.T) {
+	ctx, err := ConfigureFromFile("config")
+	require.NoError(t, err)
+
+	defer func() {
+		require.NoError(t, ctx.Close())
+	}()
+
+	id := randomBytes()
+	key, err := ctx.GenerateSecretKey(id, 128, CipherAES)
+	require.NoError(t, err)
+
+	// Check we can find it
+	_, err = ctx.FindKey(id, nil)
+	require.NoError(t, err)
+
+	err = key.Delete()
+	require.NoError(t, err)
+
+	k, err := ctx.FindKey(id, nil)
+	require.NoError(t, err)
+	require.Nil(t, k)
+}
+
+func TestAmbiguousTokenConfig(t *testing.T) {
+	slotNum := 1
+	tests := []struct {
+		config *Config
+		err    string
+	}{
+		{
+			config: &Config{TokenSerial: "serial", TokenLabel: "label"},
+			err:    "config must specify exactly one way to select a token: token label, token serial number given",
+		},
+		{
+			config: &Config{TokenSerial: "serial", SlotNumber: &slotNum},
+			err:    "config must specify exactly one way to select a token: slot number, token serial number given",
+		},
+		{
+			config: &Config{SlotNumber: &slotNum, TokenLabel: "label"},
+			err:    "config must specify exactly one way to select a token: slot number, token label given",
+		},
+		{
+			config: &Config{},
+			err:    "config must specify exactly one way to select a token: none given",
+		},
+	}
+	for i, test := range tests {
+		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
+			_, err := Configure(test.config)
+			if assert.Error(t, err) {
+				assert.Equal(t, test.err, err.Error())
+			}
+		})
+	}
+}
+
+func TestSelectBySlot(t *testing.T) {
+	config, err := loadConfigFromFile("config")
+	require.NoError(t, err)
+
+	// Look up slot number for label
+	ctx, err := Configure(config)
+	require.NoError(t, err)
+
+	slotNumber := int(ctx.slot)
+	t.Logf("Using slot %d", slotNumber)
+	err = ctx.Close()
+	require.NoError(t, err)
+
+	slotConfig := &Config{
+		SlotNumber: &slotNumber,
+		Pin:        config.Pin,
+		Path:       config.Path,
+	}
+
+	ctx, err = Configure(slotConfig)
+	require.NoError(t, err)
+
+	slotNumber2 := int(ctx.slot)
+	err = ctx.Close()
+	require.NoError(t, err)
+
+	assert.Equal(t, slotNumber, slotNumber2)
+}
+
+func TestSelectByNonExistingSlot(t *testing.T) {
+	config, err := loadConfigFromFile("config")
+	require.NoError(t, err)
+
+	rand.Seed(time.Now().UnixNano())
+	randomSlot := int(rand.Uint32())
+
+	config.TokenLabel = ""
+	config.TokenSerial = ""
+	config.SlotNumber = &randomSlot
+
+	// Look up slot number for label
+	_, err = Configure(config)
+	require.Equal(t, errTokenNotFound, err)
+}
+
+func TestAccessSameLibraryTwice(t *testing.T) {
+	ctx1, err := ConfigureFromFile("config")
+	require.NoError(t, err)
+
+	ctx2, err := ConfigureFromFile("config")
+	require.NoError(t, err)
+
+	// Close the first context, which shouldn't render the second
+	// context unusable
+	err = ctx1.Close()
+	require.NoError(t, err)
+
+	// Try to find a non-existant key. We are just checking that we can
+	// use the underlying P11 lib.
+	_, err = ctx2.FindKey(randomBytes(), nil)
+	require.NoError(t, err)
+
+	err = ctx2.Close()
+	require.NoError(t, err)
+
+	// Check we can open this again and use it without error
+	ctx3, err := ConfigureFromFile("config")
+	require.NoError(t, err)
+
+	// Try to find a non-existant key. We are just checking that we can
+	// use the underlying P11 lib.
+	_, err = ctx3.FindKey(randomBytes(), nil)
+	require.NoError(t, err)
+
+	err = ctx3.Close()
+	require.NoError(t, err)
+}
+
+func TestNoLogin(t *testing.T) {
+	// To test that no login is respected, we attempt to perform an operation on our
+	// SoftHSM HSM without logging in and check for the error.
+	cfg, err := getConfig("config")
+	require.NoError(t, err)
+	cfg.LoginNotSupported = true
+
+	ctx, err := Configure(cfg)
+	require.NoError(t, err)
+
+	_, err = ctx.GenerateSecretKey(randomBytes(), 256, CipherAES)
+	require.Error(t, err)
+
+	p11Err, ok := err.(pkcs11.Error)
+	require.True(t, ok)
+
+	assert.Equal(t, pkcs11.Error(pkcs11.CKR_USER_NOT_LOGGED_IN), p11Err)
+}
+
+func TestInvalidMaxSessions(t *testing.T) {
+	cfg, err := getConfig("config")
+	require.NoError(t, err)
+
+	cfg.MaxSessions = 1
+	_, err = Configure(cfg)
+	require.Error(t, err)
+}
+
+// randomBytes returns 32 random bytes.
+func randomBytes() []byte {
+	result := make([]byte, 32)
+	rand.Read(result)
+	return result
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}

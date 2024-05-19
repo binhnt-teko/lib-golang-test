@@ -1,0 +1,8 @@
+go 1.21.4
+
+use ./connect/grpc-bidirectional-streaming
+
+use (
+	./connect/mail
+	./security/hsm
+)
