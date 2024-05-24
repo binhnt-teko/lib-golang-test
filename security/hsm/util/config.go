@@ -21,7 +21,7 @@ func YamlStringSettings(cfg *viper.Viper) string {
 	return string(bs)
 }
 
-func LoadConfigUsingHSM(lib_path string, slotID uint, pin string,
+func LoadConfigUsingHSM(lib_path string, pin string, token, label string,
 	sessionKeyEncFile, configDataEncFile string) (*viper.Viper, error) {
 	sessionKeyEnc, err := LoadFile(sessionKeyEncFile)
 	if err != nil {
@@ -33,7 +33,7 @@ func LoadConfigUsingHSM(lib_path string, slotID uint, pin string,
 		fmt.Printf("DecodeString %s failed: %s \n", sessionKeyEncFile, err.Error())
 		return nil, err
 	}
-	sessionKey, err := HSM_Decrypt(lib_path, slotID, pin, 1, sDec)
+	sessionKey, err := HSM_AES_CBC_Decrypt(lib_path, pin, token, label, sDec)
 	if err != nil {
 		fmt.Printf("HSM_Decrypt failed: %s \n", err.Error())
 		return nil, err

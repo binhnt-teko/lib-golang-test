@@ -9,13 +9,14 @@ import (
 func LoadConfig_HSM() {
 	// lib_path := "/usr/lib/softhsm/libsofthsm2.so"
 	lib_path := "/opt/homebrew/lib/softhsm/libsofthsm2.so"
-	slotID := uint(2058063310)
+	token := ""
+	label := ""
 	pin := "8764329"
 
 	sessionKeyEncFile := "test/hsm/config/session.enc"
 	configDataEncFile := "test/hsm/config/config.enc"
 
-	cfg, err := util.LoadConfigUsingHSM(lib_path, slotID, pin, sessionKeyEncFile, configDataEncFile)
+	cfg, err := util.LoadConfigUsingHSM(lib_path, pin, token, label, sessionKeyEncFile, configDataEncFile)
 
 	if err != nil {
 		fmt.Printf("LoadConfigUsingFileKey failed: %s \n", err.Error())

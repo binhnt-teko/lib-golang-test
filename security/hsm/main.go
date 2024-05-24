@@ -5,7 +5,10 @@ import (
 )
 
 func main() {
-	usecase.HSM_Exchange_AES_Key()
+	// usecase.HSM_RSA_Test_Gen()
+	// usecase.HSM_RSA_Test_Import_PublicKey()
+	usecase.HSM_RSA_Test_Wrap_Unwrap()
+	// usecase.HSM_Exchange_AES_Key()
 	// usecases.AES_CFB()
 	// usecases.LoadConfig_FileKey()
 	// usecases.LoadConfig_HSM()

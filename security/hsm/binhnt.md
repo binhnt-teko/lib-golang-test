@@ -1,5 +1,25 @@
 
-# Add key to hsm 
+# Dev environemt 
+
+## Slot 
+- Show slot:
+softhsm2-util --show-slots
+
+- Add slot:
+softhsm2-util --init-token  --free --token alice --label alice --so-pin 123456 --pin 654321
+softhsm2-util --init-token  --free --token bob --label bob --so-pin 123456 --pin 654321
+
+- Delete Slot 
+softhsm2-util  --delete-token  --token alice --force 
+softhsm2-util  --delete-token  --token bob --force 
+
+
+# 1. Create slot 
+
+/opt/hyperledger/softhsm2/bin/softhsm2-util --init-token  --free --token app --label app --so-pin 123456 --pin 654321
+
+
+# 
 softhsm2-util --init-token --slot 1 --label "configkey" --so-pin 5462 --pin 8764329
 
 /opt/hyperledger/softhsm2/bin/softhsm2-util --init-token  --free --token orderer --label orderer --so-pin 123456 --pin 654321

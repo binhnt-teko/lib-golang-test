@@ -14,19 +14,21 @@ func TestAES_CBC() {
 	token := "test1"
 	pin := "8764329"
 
-	err := util.HSM_AES_Key(lib_path, pin, token)
-	// if err != nil {
-	// 	fmt.Printf("HSM_AES_Key: error: %s\n ", err)
-	// 	return
-	// }
+	err := util.HSM_AES_Key(lib_path, pin, token, token)
+	if err != nil {
+		fmt.Printf("HSM_AES_Key: error: %s\n ", err)
+		return
+	}
 	msg := "thu nghiem encrypt "
-	encrypted, err := util.HSM_AES_CBC_Encrypt(lib_path, pin, token, []byte(msg))
+	encryptedData, err := util.HSM_AES_CBC_Encrypt(lib_path, pin, token, token, msg)
 	if err != nil {
 		fmt.Printf("HSM_AES_CBC_Encrypt: error: %s\n", err)
 		return
 	}
-	fmt.Printf("Encrypted: %s\n", base64.RawStdEncoding.EncodeToString(encrypted))
-	clear_text, err := util.HSM_AES_CBC_Decrypt(lib_path, pin, token, encrypted)
+	encrypted := base64.StdEncoding.EncodeToString(encryptedData)
+	fmt.Printf("Encrypted: %s\n", encrypted)
+
+	clear_text, err := util.HSM_AES_CBC_Decrypt(lib_path, pin, token, token, encryptedData)
 	if err != nil {
 		fmt.Printf("HSM_AES_CBC_Decrypt: error: %s \n", err)
 		return

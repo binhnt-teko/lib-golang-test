@@ -1,9 +1,11 @@
 package util
 
 import (
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
+	"crypto/sha256"
+	"os"
 
 	"crypto/x509"
 	"encoding/base64"
@@ -120,8 +122,8 @@ func BytesToPublicKey(pub []byte) *rsa.PublicKey {
 
 // EncryptWithPublicKey encrypts data with public key
 func EncryptWithPublicKey(msg []byte, pub *rsa.PublicKey) (string, error) {
-	// hash := sha512.New()
-	hash := sha1.New()
+	hash := sha256.New()
+	// hash := sha1.New()
 	ciphertext, err := rsa.EncryptOAEP(hash, rand.Reader, pub, msg, nil)
 	if err != nil {
 		return "", err
@@ -129,27 +131,17 @@ func EncryptWithPublicKey(msg []byte, pub *rsa.PublicKey) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
-// rsa_public_key = RSA.importKey(publicKey)
-//     rsa_public_key = PKCS1_OAEP.new(rsa_public_key)
-//     encrypted_text = rsa_public_key.encrypt(passphrase)
-//     encrypted_base64 = base64.b64encode(encrypted_text)
-
 // DecryptWithPrivateKey decrypts data with private key
 func DecryptWithPrivateKey(ciphertext string, priv *rsa.PrivateKey) (string, error) {
 	sDec, err := base64.StdEncoding.DecodeString(ciphertext)
 	if err != nil {
 		return "", err
 	}
-	// hash := sha512.New()
-	hash := sha1.New()
+	hash := sha256.New()
+	// hash := sha1.New()
 	plaintext, err := rsa.DecryptOAEP(hash, rand.Reader, priv, sDec, nil)
 	return string(plaintext), err
 }
-
-// encrypted_text = base64.b64decode(encrypted_base64)
-// private_key = RSA.importKey(privateKey)
-// cipher = PKCS1_OAEP.new(private_key)
-// decrypted_text = cipher.decrypt(encrypted_text)
 
 func LoadPrivateKeyFile(file string) (*rsa.PrivateKey, error) {
 	privBytes, err := ioutil.ReadFile(file) // This is fine with Encryption
@@ -158,4 +150,29 @@ func LoadPrivateKeyFile(file string) (*rsa.PrivateKey, error) {
 		return nil, err
 	}
 	return BytesToPrivateKey(privBytes)
+}
+
+func RSA_Sign_SHA256(message []byte, rsaPrivateKey *rsa.PrivateKey) (string, error) {
+	hashed := sha256.Sum256(message)
+
+	signature, err := rsa.SignPKCS1v15(nil, rsaPrivateKey, crypto.SHA256, hashed[:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error from signing: %s\n", err)
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(signature), nil
+}
+func RSA_Verify_SHA256(rsaPublicKey *rsa.PublicKey, message []byte, signature string) bool {
+	sig, err := base64.StdEncoding.DecodeString(signature)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error in DecodeString: %s\n", err)
+		return false
+	}
+	hashed := sha256.Sum256(message)
+	err = rsa.VerifyPKCS1v15(rsaPublicKey, crypto.SHA256, hashed[:], sig)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error from verification: %s\n", err)
+		return false
+	}
+	return true
 }

@@ -17,7 +17,6 @@ func trans(key string) []byte {
 	bs := kb[:]
 	return bs
 }
-
 func AES_encrypt(stringToEncrypt string, passphrase string) (string, error) {
 	key := trans(passphrase)
 	plaintext := []byte(stringToEncrypt)
@@ -41,7 +40,6 @@ func AES_encrypt(stringToEncrypt string, passphrase string) (string, error) {
 
 func AES_decrypt(cryptoText string, passphrase string) ([]byte, error) {
 	key := trans(passphrase)
-
 	ciphertext, err := base64.StdEncoding.DecodeString(cryptoText)
 	if err != nil {
 		return nil, err

@@ -4,7 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/blcvn/lib-golang-test/security/hsm/util"
@@ -75,12 +75,12 @@ func TestSignAndVerify() {
 	fmt.Println("OK1")
 
 	fmt.Println("Test signature from HSM ......")
-	sig2, err := util.HSM_Sign(lib_path, pin, token, []byte(msg))
+	sig2, err := util.HSM_RSA_SHA256_Sign(lib_path, pin, token, "test_import", msg)
 	if err != nil {
 		fmt.Println("HSM_Sign error: ", err)
 		return
 	}
-	fmt.Printf("Signature: %s\n", hex.EncodeToString(sig2))
+	fmt.Printf("Signature: %s\n", sig2)
 
 	// var esig2 struct {
 	// 	R, S *big.Int
@@ -95,7 +95,12 @@ func TestSignAndVerify() {
 	// 	return
 	// }
 
-	ok := ecdsa.VerifyASN1(publicKey, hash[:], sig2)
+	sig2Data, err := base64.StdEncoding.DecodeString(sig2)
+	if err != nil {
+		fmt.Println("DecodeString error: ", err)
+		return
+	}
+	ok := ecdsa.VerifyASN1(publicKey, hash[:], sig2Data)
 	if !ok {
 		fmt.Println("failed")
 		return

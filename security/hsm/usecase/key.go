@@ -7,53 +7,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-
-	"github.com/blcvn/lib-golang-test/security/hsm/util"
 )
 
-func HSM_Exchange_AES_Key() {
-	//1. Generate AES Key and Encrypt Data
-	hsmLib := "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so"
-	pin := ""
-	walletToken := "wallet"
-
-	fmt.Printf("1. Key_Gen_AES_Key \n")
-	util.Key_Gen_AES_Key(hsmLib, pin, walletToken, walletToken)
-
-	msg := "Thu nghiem ma hoa"
-
-	fmt.Printf("2. Key_Encrypt_With_AES_Key \n")
-	util.Key_Encrypt_With_AES_Key(hsmLib, pin, "wallet", "wallet-aes", msg)
-	//2. Gen RSA Key => Get public Cert
-
-	//3. Get Wrapped Key
-
-	//4. Import wrapped key to decrypt data
-
-	// Init PKCS
-	//  Create RSA Key used for wrapped transfer
-
-	// // B) unwrap AES key using RSA Public Wrapping Key
-	// ik, err := p.UnwrapKey(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)}, wpvk, wrappedPrivBytes, aesKeyTemplate)
-
-	// if err != nil {
-	// 	log.Fatalf("Unwrap Failed: %v", err)
-	// }
-
-	// // use unwraped key to decrypt the same data we did at the beginning
-	// err = p.DecryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_AES_CBC_PAD, cdWithIV[0:16])}, ik)
-	// if err != nil {
-	// 	panic(fmt.Sprintf("EncryptInit() failed %s\n", err))
-	// }
-
-	// pt, err = p.Decrypt(session, ct[:16])
-	// if err != nil {
-	// 	panic(fmt.Sprintf("Encrypt() failed %s\n", err))
-	// }
-
-	// log.Printf("Decrypt %s", string(pt))
-
-}
 func EncryptKey() {
 	// Load your secret key from a safe place and reuse it across multiple
 	// Seal/Open calls. (Obviously don't use this example key for anything
