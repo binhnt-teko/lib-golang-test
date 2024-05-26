@@ -1,4 +1,4 @@
-package mai
+package main
 
 import (
 	"log"
@@ -21,7 +21,9 @@ func main() {
 
 	router.POST("/data", kvStore.HandleSetValue)
 	router.GET("/data", kvStore.HandleGetValue)
-	router.POST("/snapshot", kvStore.HandleCreateSnapshot)
+	router.GET("/all", kvStore.HandleGetAll)
+	router.GET("/all-snapshot", kvStore.HandleGetAllSnapshot)
+	router.POST("/snapshot", kvStore.HandleSnapshot)
 
 	router.Run(":8080")
 }

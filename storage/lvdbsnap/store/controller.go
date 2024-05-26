@@ -12,7 +12,8 @@ type KV struct {
 	Value string
 }
 type KVStore struct {
-	db *leveldb.DB
+	db       *leveldb.DB
+	snapshot *leveldb.Snapshot
 }
 
 func New(db *leveldb.DB) *KVStore {
@@ -85,5 +86,43 @@ func (s *KVStore) HandleGetAll(c *gin.Context) {
 	return
 
 }
-func (s *KVStore) HandleCreateSnapshot(c *gin.Context) {
+func (s *KVStore) HandleGetAllSnapshot(c *gin.Context) {
+	list := []*KV{}
+	if s.snapshot == nil {
+		c.JSON(202, map[string]interface{}{
+			"message": fmt.Sprintf("Must take snapshot before"),
+		})
+		return
+	}
+	iter := s.snapshot.NewIterator(nil, nil)
+	for iter.Next() {
+		key := iter.Key()
+		value := iter.Value()
+		list = append(list, &KV{
+			Key:   string(key),
+			Value: string(value),
+		})
+	}
+	iter.Release()
+	err := iter.Error()
+	if err != nil {
+		c.JSON(202, map[string]interface{}{
+			"message": fmt.Sprintf("Iterator Error: %s ", err.Error()),
+		})
+		return
+	}
+	c.JSON(200, list)
+	return
+
+}
+func (s *KVStore) HandleSnapshot(c *gin.Context) {
+	snapshot, err := s.db.GetSnapshot()
+	if err != nil {
+		c.JSON(202, map[string]interface{}{
+			"message": fmt.Sprintf("GetSnapshot error: %s ", err.Error()),
+		})
+	}
+	s.snapshot = snapshot
+	c.JSON(200, "Snapshot ok")
+	return
 }
