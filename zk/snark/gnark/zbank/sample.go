@@ -21,11 +21,11 @@ func Sample() {
 		// fixed
 		BobBalance: bobBalance,
 		// given by the user
-		NewBobBalance: 500,
+		NewBobBalance: 100,
 		// given by the user
-		NewAliceBalance: 0,
+		NewAliceBalance: 400,
 		// private
-		Transfer: 500,
+		Transfer: 100,
 	}
 
 	witness, err := frontend.NewWitness(&circuit, ecc.BN254.ScalarField())
@@ -42,7 +42,9 @@ func Sample() {
 
 	// create a proof
 	proof, err := groth16.Prove(
-		oR1cs, pk, witness, backend.WithSolverOptions(solver.WithHints(TransferHint)),
+		oR1cs, pk,
+		witness,
+		backend.WithSolverOptions(solver.WithHints(TransferHint)),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -58,7 +60,7 @@ func Sample() {
 	}
 
 	proofHex := hex.EncodeToString(buf.Bytes())
-	err = VerifyProof("500", proofHex)
+	err = VerifyProof("100", proofHex)
 	if err != nil {
 		log.Fatal(err)
 		return

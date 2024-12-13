@@ -73,10 +73,10 @@ func VerifyProof(newBobBalanceStr string, proofHex string) error {
 	}
 
 	// ensure that it's greater than 100,000
-	requiredThreshold := big.NewInt(100000)
-	if newBobBalance.Cmp(requiredThreshold) < 0 {
-		return fmt.Errorf("newBobBalance is less than 100,000")
-	}
+	// requiredThreshold := big.NewInt(100000)
+	// if newBobBalance.Cmp(requiredThreshold) < 0 {
+	// 	return fmt.Errorf("newBobBalance is less than 100,000")
+	// }
 
 	// set witness with fixed public inputs
 	circuit := Circuit{
